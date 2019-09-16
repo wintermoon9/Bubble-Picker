@@ -39,7 +39,7 @@ data class Item(val pickerItem: PickerItem, val circleBody: CircleBody) {
     private var texture: Int = 0
     private var imageTexture: Int = 0
     private val currentTexture: Int
-        get() = if (circleBody.increased || circleBody.isIncreasing) imageTexture else texture
+        get() = texture
     private val bitmapSize = 256f
     private val gradient: LinearGradient?
         get() {
@@ -74,7 +74,9 @@ data class Item(val pickerItem: PickerItem, val circleBody: CircleBody) {
 
         val canvas = Canvas(bitmap)
 
-        if (isSelected) drawImage(canvas)
+        // REMOVED SO IMAGES AREN'T RENDERED WHEN CIRCLES ARE SELECTED
+        //if (isSelected) drawImage(canvas)
+
         drawBackground(canvas, isSelected)
         drawIcon(canvas)
         drawText(canvas)
@@ -87,7 +89,8 @@ data class Item(val pickerItem: PickerItem, val circleBody: CircleBody) {
         bgPaint.style = Paint.Style.FILL
         pickerItem.color?.let { bgPaint.color = pickerItem.color!! }
         pickerItem.gradient?.let { bgPaint.shader = gradient }
-        if (withImage) bgPaint.alpha = (pickerItem.overlayAlpha * 255).toInt()
+        // REMOVED SO SELECTED ITEM BACKGROUNDS STAY THE SAME
+        //if (withImage) bgPaint.alpha = (pickerItem.overlayAlpha * 255).toInt()
         canvas.drawRect(0f, 0f, bitmapSize, bitmapSize, bgPaint)
     }
 

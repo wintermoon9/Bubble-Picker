@@ -1,8 +1,11 @@
 package com.igalata.bubblepicker.physics
 
+import android.util.Log
 import org.jbox2d.collision.shapes.CircleShape
 import org.jbox2d.common.Vec2
 import org.jbox2d.dynamics.*
+import kotlin.math.abs
+import kotlin.math.pow
 
 /**
  * Created by irinagalata on 1/26/17.
@@ -11,25 +14,23 @@ class CircleBody(val world: World, var position: Vec2, var radius: Float, var in
 
     val decreasedRadius: Float = radius
 
+    val normalRadius = radius
+
     var isIncreasing = false
 
     var isDecreasing = false
 
-    var toBeIncreased = false
-
-    var toBeDecreased = false
-
     val finished: Boolean
-        get() = !toBeIncreased && !toBeDecreased && !isIncreasing && !isDecreasing
+        get() = !isIncreasing && !isDecreasing
 
     val isBusy: Boolean
         get() = isIncreasing || isDecreasing
 
     lateinit var physicalBody: Body
 
-    var increased = false
-
     var isVisible = true
+
+    var weight: Float = MIN_WEIGHT
 
     private val margin = 0.01f
     private val damping = 25f
@@ -67,15 +68,17 @@ class CircleBody(val world: World, var position: Vec2, var radius: Float, var in
         }
     }
 
-    fun resize(step: Float) = if (increased) decrease(step) else increase(step)
-
     fun decrease(step: Float) {
         isDecreasing = true
         radius -= step
         reset()
 
-        if (Math.abs(radius - decreasedRadius) < step) {
-            increased = false
+        val decrement = 1 + ((weight - 2) / MAX_WEIGHT)
+
+        Log.d("bubblepicker", "decrement: $decrement")
+
+        if (abs(radius - (normalRadius * decrement)) < step) {
+            weight -=1
             clear()
         }
     }
@@ -85,8 +88,12 @@ class CircleBody(val world: World, var position: Vec2, var radius: Float, var in
         radius += step
         reset()
 
-        if (Math.abs(radius - increasedRadius) < step) {
-            increased = true
+        val increment = 1 + (weight / MAX_WEIGHT)
+
+        Log.d("bubblepicker", "increment: $increment")
+
+        if (abs(radius - (normalRadius * increment)) < step) {
+            weight += 1
             clear()
         }
     }
@@ -95,16 +102,13 @@ class CircleBody(val world: World, var position: Vec2, var radius: Float, var in
         physicalBody.fixtureList?.shape?.m_radius = radius + margin
     }
 
-    fun defineState() {
-        toBeIncreased = !increased
-        toBeDecreased = increased
-    }
-
     private fun clear() {
-        toBeIncreased = false
-        toBeDecreased = false
         isIncreasing = false
         isDecreasing = false
     }
 
+    companion object {
+        const val MIN_WEIGHT = 1f
+        const val MAX_WEIGHT = 5f
+    }
 }

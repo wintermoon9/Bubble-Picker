@@ -12,7 +12,7 @@ import java.util.*
 object Engine {
 
     val selectedBodies: List<CircleBody>
-        get() = bodies.filter { it.increased || it.toBeIncreased || it.isIncreasing }
+        get() = bodies.filter { it.weight > 1 || it.isIncreasing }
     var maxSelectedCount: Int? = null
     var radius = 50
         set(value) {
@@ -39,6 +39,8 @@ object Engine {
     private val currentGravity: Float
         get() = if (touch) increasedGravity else gravity
     private val toBeResized = ArrayList<Item>()
+    private val toBeDecreased = ArrayList<Item>()
+
     private val startX
         get() = if (centerImmediately) 0.5f else 2.2f
     private var stepsCount = 0
@@ -57,11 +59,20 @@ object Engine {
         return bodies
     }
 
+    fun addCircle(x: Float, y: Float): CircleBody {
+        val body = CircleBody(world, Vec2(x, y), bubbleRadius * scaleX, (bubbleRadius * scaleX) * 1.3f, interpolate(0.8f, 0.2f, radius / 100f))
+        bodies.add(body)
+        return body
+    }
+
     fun move() {
-        toBeResized.forEach { it.circleBody.resize(resizeStep) }
+        toBeDecreased.forEach { it.circleBody.decrease(resizeStep) }
+        toBeResized.forEach { it.circleBody.increase(resizeStep) }
         world.step(if (centerImmediately) 0.035f else step, 11, 11)
         bodies.forEach { move(it) }
         toBeResized.removeAll(toBeResized.filter { it.circleBody.finished })
+        toBeDecreased.removeAll(toBeDecreased.filter { it.circleBody.finished })
+
         stepsCount++
         if (stepsCount >= 10) {
             centerImmediately = false
@@ -88,12 +99,22 @@ object Engine {
         bodies.clear()
     }
 
-    fun resize(item: Item): Boolean {
-        if (selectedBodies.size >= maxSelectedCount ?: bodies.size && !item.circleBody.increased) return false
+    fun decreaseWeight(item: Item): Boolean {
+        if (item.circleBody.weight == CircleBody.MIN_WEIGHT) return false
 
         if (item.circleBody.isBusy) return false
 
-        item.circleBody.defineState()
+        toBeDecreased.add(item)
+
+        return true
+    }
+
+    fun increaseWeight(item: Item): Boolean {
+        if (selectedBodies.size >= maxSelectedCount ?: bodies.size && item.circleBody.weight == CircleBody.MIN_WEIGHT) return false
+
+        if (item.circleBody.weight >= CircleBody.MAX_WEIGHT) return false
+
+        if (item.circleBody.isBusy) return false
 
         toBeResized.add(item)
 
@@ -102,8 +123,8 @@ object Engine {
 
     private fun createBorders() {
         borders = arrayListOf(
-                Border(world, Vec2(0f, 0.5f / scaleY), Border.HORIZONTAL),
-                Border(world, Vec2(0f, -0.5f / scaleY), Border.HORIZONTAL)
+            Border(world, Vec2(0f, 0.5f / scaleY), Border.HORIZONTAL),
+            Border(world, Vec2(0f, -0.5f / scaleY), Border.HORIZONTAL)
         )
     }
 
@@ -112,7 +133,7 @@ object Engine {
             body.isVisible = centerImmediately.not()
             val direction = gravityCenter.sub(position)
             val distance = direction.length()
-            val gravity = if (body.increased) 1.3f * currentGravity else currentGravity
+            val gravity = if (body.weight > 1) 1.3f * currentGravity else currentGravity
             if (distance > step * 200) {
                 applyForce(direction.mul(gravity / distance.sqr()), position)
             }

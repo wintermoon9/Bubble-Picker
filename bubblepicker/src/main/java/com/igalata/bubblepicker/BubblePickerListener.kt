@@ -7,8 +7,8 @@ import com.igalata.bubblepicker.model.PickerItem
  */
 interface BubblePickerListener {
 
-    fun onBubbleSelected(item: PickerItem)
+    fun onBubbleWeightDecreased(item: PickerItem)
 
-    fun onBubbleDeselected(item: PickerItem)
+    fun onBubbleWeightIncreased(item: PickerItem)
 
 }

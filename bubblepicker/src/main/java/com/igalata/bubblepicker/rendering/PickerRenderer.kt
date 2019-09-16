@@ -79,7 +79,7 @@ class PickerRenderer(val glView: View) : GLSurfaceView.Renderer {
         Engine.build(items.size, scaleX, scaleY).forEachIndexed { index, body ->
             circles.add(Item(items[index], body))
         }
-        items.forEach { if (it.isSelected) Engine.resize(circles.first { circle -> circle.pickerItem == it }) }
+        items.forEach { if (it.isSelected) Engine.increaseWeight(circles.first { circle -> circle.pickerItem == it }) }
         if (textureIds == null) textureIds = IntArray(circles.size * 2)
         initializeArrays()
     }
@@ -87,6 +87,7 @@ class PickerRenderer(val glView: View) : GLSurfaceView.Renderer {
     private fun initializeArrays() {
         vertices = FloatArray(circles.size * 8)
         textureVertices = FloatArray(circles.size * 8)
+
         circles.forEachIndexed { i, item -> initializeItem(item, i) }
         verticesBuffer = vertices?.toFloatBuffer()
         uvBuffer = textureVertices?.toFloatBuffer()
@@ -110,7 +111,7 @@ class PickerRenderer(val glView: View) : GLSurfaceView.Renderer {
 
         body.initialPosition.apply {
             vertices?.put(8 * index, floatArrayOf(x - radiusX, y + radiusY, x - radiusX, y - radiusY,
-                    x + radiusX, y + radiusY, x + radiusX, y - radiusY))
+                x + radiusX, y + radiusY, x + radiusX, y - radiusY))
         }
     }
 
@@ -150,23 +151,29 @@ class PickerRenderer(val glView: View) : GLSurfaceView.Renderer {
 
     fun release() = Engine.release()
 
+    fun decreaseSize(x: Float, y: Float) = getItem(Vec2(x, glView.height - y))?.apply {
+        if (Engine.decreaseWeight(this)) {
+            listener?.onBubbleWeightDecreased(pickerItem)
+        }
+    }
+
+    fun increaseSize(x: Float, y: Float) = getItem(Vec2(x, glView.height - y))?.apply {
+        if (Engine.increaseWeight(this)) {
+            listener?.onBubbleWeightIncreased(pickerItem)
+        }
+    }
+
+    fun createBubble(x: Float, y: Float) {
+    }
+
     private fun getItem(position: Vec2) = position.let {
         val x = it.x.convertPoint(glView.width, scaleX)
         val y = it.y.convertPoint(glView.height, scaleY)
         circles.find { Math.sqrt(((x - it.x).sqr() + (y - it.y).sqr()).toDouble()) <= it.radius }
     }
 
-    fun resize(x: Float, y: Float) = getItem(Vec2(x, glView.height - y))?.apply {
-        if (Engine.resize(this)) {
-            listener?.let {
-                if (circleBody.increased) it.onBubbleDeselected(pickerItem) else it.onBubbleSelected(pickerItem)
-            }
-        }
-    }
-
     private fun clear() {
         circles.clear()
         Engine.clear()
     }
-
 }

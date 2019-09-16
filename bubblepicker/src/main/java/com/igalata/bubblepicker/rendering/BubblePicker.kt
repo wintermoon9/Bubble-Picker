@@ -3,21 +3,25 @@ package com.igalata.bubblepicker.rendering
 import android.content.Context
 import android.graphics.PixelFormat
 import android.opengl.GLSurfaceView
-import android.support.annotation.ColorInt
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
+import androidx.annotation.ColorInt
 import com.igalata.bubblepicker.BubblePickerListener
 import com.igalata.bubblepicker.R
 import com.igalata.bubblepicker.adapter.BubblePickerAdapter
 import com.igalata.bubblepicker.model.Color
 import com.igalata.bubblepicker.model.PickerItem
+import android.view.GestureDetector
+
 
 /**
  * Created by irinagalata on 1/19/17.
  */
 class BubblePicker : GLSurfaceView {
 
-    @ColorInt var background: Int = 0
+    @ColorInt
+    var background: Int = 0
         set(value) {
             field = value
             renderer.backgroundColor = Color(value)
@@ -60,6 +64,8 @@ class BubblePicker : GLSurfaceView {
             renderer.centerImmediately = value
         }
 
+    private val gesture: GestureDetector
+
     private val renderer = PickerRenderer(this)
     private var startX = 0f
     private var startY = 0f
@@ -68,6 +74,50 @@ class BubblePicker : GLSurfaceView {
 
     constructor(context: Context?) : this(context, null)
     constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs) {
+
+        gesture = GestureDetector(context, object: GestureDetector.SimpleOnGestureListener() {
+
+            override fun onLongPress(e: MotionEvent?) {
+                super.onLongPress(e)
+
+                e?.let {
+                    renderer.decreaseSize(it.x, it.y)
+                }
+            }
+
+            override fun onSingleTapUp(event: MotionEvent?): Boolean {
+                event?.let {
+                    if (isClick(it)) renderer.increaseSize(it.x, it.y)
+                    renderer.release()
+                }
+
+                return super.onSingleTapUp(event)
+            }
+
+            override fun onDown(event: MotionEvent?): Boolean {
+                event?.let {
+                    startX = it.x
+                    startY = it.y
+                    previousX = it.x
+                    previousY = it.y
+                }
+
+                return super.onDown(event)
+            }
+
+            override fun onDoubleTap(e: MotionEvent?): Boolean {
+                e?.let {
+                    renderer.createBubble(it.x, it.y)
+                }
+
+                return true
+            }
+        })
+
+        setOnTouchListener { view, motionEvent ->
+            gesture.onTouchEvent(motionEvent)
+        }
+
         setZOrderOnTop(true)
         setEGLContextClientVersion(2)
         setEGLConfigChooser(8, 8, 8, 8, 16, 0)
@@ -79,16 +129,6 @@ class BubblePicker : GLSurfaceView {
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                startX = event.x
-                startY = event.y
-                previousX = event.x
-                previousY = event.y
-            }
-            MotionEvent.ACTION_UP -> {
-                if (isClick(event)) renderer.resize(event.x, event.y)
-                renderer.release()
-            }
             MotionEvent.ACTION_MOVE -> {
                 if (isSwipe(event)) {
                     renderer.swipe((previousX - event.x) * 4, (previousY - event.y) * 4)
